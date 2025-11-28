@@ -1,123 +1,159 @@
-from flask import Flask, request
-from flask_cors import CORS
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
-CORS(app)
 
-def checkPrecedence(top, a):
-    precedence = {'+': 1, '-': 1, '*': 2, '/': 2, '^': 3}
-    if top == '(' or a == '(':
-        return False
-    if top in precedence and a in precedence:
-        return precedence[top] > precedence[a] or (top == '^' and a == '^')
-    return False
 
-def is_push(stack, a):
-    if not stack or stack[-1] == '(' or a == '(' or checkPrecedence(stack[-1], a):
-        return True
-    return False
-
-def reverse_string(s):
-    return s[::-1]
-
-def infixToPostfix(expr):
-    stack = []
-    result = []
-    for i in range(len(expr)):
-        ch = expr[i]
-        if ch.isalnum():
-            result.append(ch)
+def rv(s: str) -> str:
+    r = ""
+    for ch in s:
+        if ch == ')':
+            r = '(' + r
         elif ch == '(':
-            stack.append(ch)
-        elif ch == ')':
-            while stack and stack[-1] != '(':
-                result.append(stack.pop())
-            if stack: stack.pop()
-        elif ch in {'+', '-', '*', '/', '^'}:
-            while stack and stack[-1] != '(' and checkPrecedence(stack[-1], ch):
-                result.append(stack.pop())
-            stack.append(ch)
-    while stack:
-        result.append(stack.pop())
-    return ''.join(result)
-
-def infixToPrefix(expr):
-    stack = []
-    result = []
-    for i in range(len(expr)):
-        ch = expr[i]
-        if ch.isalnum():
-            result.append(ch)
-        elif ch == ')':
-            stack.append(ch)
-        elif ch == '(':
-            while stack and stack[-1] != ')':
-                result.append(stack.pop())
-            if stack: stack.pop()
-        elif ch in {'+', '-', '*', '/', '^'}:
-            while stack and stack[-1] != ')' and checkPrecedence(ch, stack[-1]):
-                result.append(stack.pop())
-            stack.append(ch)
-    while stack:
-        result.append(stack.pop())
-    return reverse_string(''.join(result))
-
-def prefixToInfix(expr):
-    stack = []
-    for i in range(len(expr) - 1, -1, -1):
-        ch = expr[i]
-        if ch.isalnum():
-            stack.append(ch)
-        elif ch in {'+', '-', '*', '/', '^'}:
-            if len(stack) >= 2:
-                op1 = stack.pop()
-                op2 = stack.pop()
-                new_expr = f"({op1}{ch}{op2})"
-                stack.append(new_expr)
-    return stack[0] if stack else ""
-
-def postfixToInfix(expr):
-    stack = []
-    for ch in expr:
-        if ch.isalnum():
-            stack.append(ch)
-        elif ch in {'+', '-', '*', '/', '^'}:
-            if len(stack) >= 2:
-                op2 = stack.pop()
-                op1 = stack.pop()
-                new_expr = f"({op1}{ch}{op2})"
-                stack.append(new_expr)
-    return stack[0] if stack else ""
-
-@app.route('/convert', methods=['POST', 'GET'])
-def convert():
-    try:
-        expression = request.form.get('expression', '').strip()
-        operation = request.form.get('operation', '').strip()
-        
-        if not expression or not operation:
-            return "Error: Missing parameters", 400
-        
-        if operation == 'infix_postfix':
-            result = infixToPostfix(expression)
-            return f"Postfix({result})"
-        elif operation == 'infix_prefix':
-            result = infixToPrefix(expression)
-            return f"Prefix({result})"
-        elif operation == 'prefix_infix':
-            result = prefixToInfix(expression)
-            return f"Infix({result})"
-        elif operation == 'postfix_infix':
-            result = postfixToInfix(expression)
-            return f"Infix({result})"
+            r = ')' + r
         else:
-            return "Error: Unknown operation", 400
-    except Exception as e:
-        return f"Error: {str(e)}", 500
+            r = ch + r
+    return r
 
-@app.route('/', methods=['GET'])
+def give_precedence(a: str) -> int:
+    if a == '^':
+        return 4
+    elif a == '/':
+        return 3
+    elif a == '*':
+        return 2
+    else:
+        return 1
+
+def check_precedence(top: str, a: str) -> bool:
+    x = give_precedence(top)
+    y = give_precedence(a)
+    return y > x or (top == '^' and a == '^')
+
+def is_push(stack, a: str) -> bool:
+    return (not stack) or stack[-1] == '(' or a == '(' or check_precedence(stack[-1], a)
+
+# -----------------------
+#   INFIX → POSTFIX
+# -----------------------
+def infix_to_postfix(expr: str) -> str:
+    s = expr
+    o = ""
+    stack = []
+
+    for ch in s:
+        if ch.isalpha():
+            o += ch
+        else:
+            if ch == ')':
+                while stack[-1] != '(':
+                    o += stack.pop()
+                stack.pop()
+            else:
+                while not is_push(stack, ch):
+                    o += stack.pop()
+                stack.append(ch)
+
+    while stack:
+        o += stack.pop()
+
+    return "Postfix(" + o + ")"
+
+# -----------------------
+#   INFIX → PREFIX
+# -----------------------
+def infix_to_prefix(expr: str) -> str:
+    s = rv(expr)
+    o = ""
+    stack = []
+
+    for ch in s:
+        if ch.isalpha():
+            o += ch
+        else:
+            if ch == ')':
+                while stack[-1] != '(':
+                    o += stack.pop()
+                stack.pop()
+            else:
+                while not is_push(stack, ch):
+                    o += stack.pop()
+                stack.append(ch)
+
+    while stack:
+        o += stack.pop()
+
+    o = o[::-1]
+    return "Prefix(" + o + ")"
+
+# -----------------------
+#   PREFIX → INFIX
+# -----------------------
+def prefix_to_infix(expr: str) -> str:
+    s = expr[::-1]
+    stack = []
+
+    for ch in s:
+        if ch.isalpha():
+            stack.append(ch)
+        else:
+            va = stack.pop()
+            vb = stack.pop()
+            b = f"({vb}{ch}{va})"
+            stack.append(b)
+
+    s1 = stack[-1]
+    s1 = rv(s1)
+    return "InfixFromPrefix(" + s1 + ")"
+
+# -----------------------
+#   POSTFIX → INFIX
+# -----------------------
+def postfix_to_infix(expr: str) -> str:
+    stack = []
+
+    for ch in expr:
+        if ch.isalpha():
+            stack.append(ch)
+        else:
+            va = stack.pop()
+            vb = stack.pop()
+            b = f"({vb}{ch}{va})"
+            stack.append(b)
+
+    return "InfixFromPostfix(" + stack[-1] + ")"
+
+# -----------------------
+# API ROUTE
+# -----------------------
+
+@app.route("/convert", methods=["POST"])
+def convert():
+    data = request.get_json()
+
+    if not data or "expression" not in data or "operation" not in data:
+        return jsonify({"error": "Missing parameters"}), 400
+
+    expr = data["expression"]
+    op = data["operation"]
+
+    if op == "infix_postfix":
+        result = infix_to_postfix(expr)
+    elif op == "infix_prefix":
+        result = infix_to_prefix(expr)
+    elif op == "prefix_infix":
+        result = prefix_to_infix(expr)
+    elif op == "postfix_infix":
+        result = postfix_to_infix(expr)
+    else:
+        return jsonify({"error": "Unknown operation"}), 400
+
+    return jsonify({"result": result})
+
+
+@app.route("/", methods=["GET"])
 def home():
-    return "Expression Converter API ✅ Ready!"
+    return "Backend Running Successfully"
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
