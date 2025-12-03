@@ -127,16 +127,27 @@ def postfix_to_infix(expr: str) -> str:
 # -----------------------
 
 @app.route("/convert", methods=["GET", "POST"])
-
 def convert():
-    data = request.get_json()
 
-    if not data or "expression" not in data or "operation" not in data:
-        return jsonify({"error": "Missing parameters"}), 400
+    # Handle GET request
+    if request.method == "GET":
+        expr = request.args.get("expression")
+        op = request.args.get("operation")
 
-    expr = data["expression"]
-    op = data["operation"]
+        if not expr or not op:
+            return jsonify({"error": "Missing parameters"}), 400
 
+    # Handle POST request
+    else:
+        data = request.get_json(silent=True)
+
+        if not data or "expression" not in data or "operation" not in data:
+            return jsonify({"error": "Missing parameters"}), 400
+
+        expr = data["expression"]
+        op = data["operation"]
+
+    # Perform conversion
     if op == "infix_postfix":
         result = infix_to_postfix(expr)
     elif op == "infix_prefix":
