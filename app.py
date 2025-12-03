@@ -126,7 +126,8 @@ def postfix_to_infix(expr: str) -> str:
 # API ROUTE
 # -----------------------
 
-@app.route("/convert", methods=["POST"])
+@app.route("/convert", methods=["GET", "POST"])
+
 def convert():
     data = request.get_json()
 
