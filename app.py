@@ -59,7 +59,7 @@ def infix_to_postfix(expr: str) -> str:
     while stack:
         o += stack.pop()
 
-    return "Postfix[" + o + "]"
+    return "Postfix[ " + o + " ]"
 
 # -----------------------
 #   INFIX → PREFIX
@@ -86,7 +86,7 @@ def infix_to_prefix(expr: str) -> str:
         o += stack.pop()
 
     o = o[::-1]
-    return "Prefix(" + o + ")"
+    return "Prefix[ " + o + " ]"
 
 # -----------------------
 #   PREFIX → INFIX
@@ -106,7 +106,7 @@ def prefix_to_infix(expr: str) -> str:
 
     s1 = stack[-1]
     s1 = rv(s1)
-    return "InfixFromPrefix[" + s1 + "]"
+    return "Infix[ " + s1 + " ]"
 
 # -----------------------
 #   POSTFIX → INFIX
@@ -123,7 +123,7 @@ def postfix_to_infix(expr: str) -> str:
             b = f"({vb}{ch}{va})"
             stack.append(b)
 
-    return "InfixFromPostfix[" + stack[-1] + "]"
+    return "Infix[ " + stack[-1] + " ]"
 
 # -----------------------
 # API ROUTE
